@@ -7,6 +7,7 @@ services:
     branch: main
     buildCommand: ./build.sh
     startCommand: gunicorn config.wsgi:application
+    releaseCommand: python manage.py migrate
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings
@@ -15,7 +16,7 @@ services:
       - key: DEBUG
         value: False
       - key: DATABASE_URL
-        value: postgresql://postgres:similoluwaproject@db.ycluuwannajkygqarfxc.supabase.co:5432/postgres
+        value: postgresql://postgres:similoluwaproject@db.ycluuwannajkygqarfxc.supabase.co:5432/postgres?sslmode=require
       - key: SECRET_KEY
         value: django-insecure-8x5&_=k3^7m9#2p!q@r$s%t^u*v(w)x-y+z12345678
       - key: ALLOWED_HOSTS

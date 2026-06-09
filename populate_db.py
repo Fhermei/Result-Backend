@@ -5,7 +5,6 @@ import sys
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-# Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
@@ -16,14 +15,16 @@ from apps.academics.models import Faculty, Department, AcademicSession, Semester
 from apps.courses.models import Course, CourseRegistration
 from apps.students.models import StudentProfile
 from apps.results.models import Result, SemesterGPARecord, CGPARecord
-from apps.results.views import calculate_semester_gpa, calculate_cgpa, get_class_degree
 
 User = get_user_model()
-fake = Faker('en_NG')  # Nigerian locale
+fake = Faker('en_NG')
 
-# Nigerian Names
+NON_INTERACTIVE = '--non-interactive' in sys.argv
+if NON_INTERACTIVE:
+    sys.argv.remove('--non-interactive')
+
 NIGERIAN_FIRST_NAMES = [
-    'Chinedu', 'Olufemi', 'Adebayo', 'Ngozi', 'Chiamaka', 'Oluwaseun', 'Ifeanyi', 
+    'Chinedu', 'Olufemi', 'Adebayo', 'Ngozi', 'Chiamaka', 'Oluwaseun', 'Ifeanyi',
     'Temitope', 'Chukwudi', 'Funmilayo', 'Emeka', 'Blessing', 'Olayinka', 'Chinonso',
     'Segun', 'Adaeze', 'Obinna', 'Similoluwa', 'Oluwatobi', 'Chidimma', 'Ayomide',
     'Chibueze', 'Oluwafemi', 'Chisom', 'Oluwaseyi', 'Chukwuemeka', 'Tolulope',
@@ -32,13 +33,12 @@ NIGERIAN_FIRST_NAMES = [
 ]
 
 NIGERIAN_LAST_NAMES = [
-    'Okafor', 'Adewale', 'Ogunleye', 'Eze', 'Okonkwo', 'Balogun', 'Nwosu', 
+    'Okafor', 'Adewale', 'Ogunleye', 'Eze', 'Okonkwo', 'Balogun', 'Nwosu',
     'Adebayo', 'Onyeka', 'Oladipo', 'Chukwu', 'Oluwole', 'Nwachukwu', 'Oyedele',
     'Okeke', 'Ogunbiyi', 'Nwankwo', 'Ogunyemi', 'Ekwueme', 'Ogunlana', 'Nweke',
     'Ogunwale', 'Okpara', 'Ogunjobi', 'Nwagwu', 'Ogunlade', 'Okoro', 'Ogunmuyiwa'
 ]
 
-# Nigerian Faculties and Departments
 FACULTIES_DATA = [
     {
         'name': 'Faculty of Engineering',
@@ -47,8 +47,8 @@ FACULTIES_DATA = [
             {'name': 'Computer Engineering', 'code': 'CEN'},
             {'name': 'Electrical Engineering', 'code': 'EEN'},
             {'name': 'Mechanical Engineering', 'code': 'MEN'},
-            {'name': 'Civil Engineering', 'code': 'CEN'},
-            {'name': 'Chemical Engineering', 'code': 'CHEN'},
+            {'name': 'Civil Engineering', 'code': 'CIV'},
+            {'name': 'Chemical Engineering', 'code': 'CHE'},
         ]
     },
     {
@@ -58,7 +58,7 @@ FACULTIES_DATA = [
             {'name': 'Computer Science', 'code': 'CSC'},
             {'name': 'Mathematics', 'code': 'MAT'},
             {'name': 'Physics', 'code': 'PHY'},
-            {'name': 'Chemistry', 'code': 'CHE'},
+            {'name': 'Chemistry', 'code': 'CHM'},
             {'name': 'Biochemistry', 'code': 'BCH'},
         ]
     },
@@ -102,7 +102,6 @@ FACULTIES_DATA = [
     },
 ]
 
-# Course data by department
 COURSES_DATA = {
     'CSC': [
         {'code': 'CSC101', 'title': 'Introduction to Computer Science', 'unit': 3},
@@ -166,29 +165,54 @@ COURSES_DATA = {
     ],
 }
 
+def calculate_semester_gpa(results_data):
+    total_quality_points = 0
+    total_credit_units = 0
+    grade_points = {'A': 5.0, 'B': 4.0, 'C': 3.0, 'D': 2.0, 'E': 1.0, 'F': 0.0}
+    for result in results_data:
+        credit_unit = result['credit_unit']
+        grade = result['grade']
+        quality_points = credit_unit * grade_points.get(grade, 0)
+        total_quality_points += quality_points
+        total_credit_units += credit_unit
+    if total_credit_units == 0:
+        return 0.0, 0, 0
+    gpa = total_quality_points / total_credit_units
+    return round(gpa, 2), total_quality_points, total_credit_units
+
+def calculate_cgpa(semester_data):
+    total_quality_points_all = sum(s['total_quality_points'] for s in semester_data)
+    total_credit_units_all = sum(s['total_credit_units'] for s in semester_data)
+    if total_credit_units_all == 0:
+        return 0.0
+    cgpa = total_quality_points_all / total_credit_units_all
+    return round(cgpa, 2)
+
+def get_class_degree(cgpa):
+    if cgpa >= 4.50: return 'First Class'
+    elif cgpa >= 3.50: return 'Second Class Upper'
+    elif cgpa >= 2.40: return 'Second Class Lower'
+    elif cgpa >= 1.50: return 'Third Class'
+    elif cgpa >= 1.00: return 'Pass'
+    else: return 'Probation'
+
 def create_faculties_and_departments():
     print("Creating Faculties and Departments...")
     faculties = {}
     departments = {}
-    
     for faculty_data in FACULTIES_DATA:
         faculty, created = Faculty.objects.get_or_create(
             code=faculty_data['code'],
             defaults={'name': faculty_data['name']}
         )
         faculties[faculty_data['code']] = faculty
-        
         for dept_data in faculty_data['departments']:
             department, created = Department.objects.get_or_create(
                 code=dept_data['code'],
-                defaults={
-                    'name': dept_data['name'],
-                    'faculty': faculty
-                }
+                defaults={'name': dept_data['name'], 'faculty': faculty}
             )
             departments[dept_data['code']] = department
             print(f"  Created: {faculty.name} -> {department.name}")
-    
     return faculties, departments
 
 def create_levels():
@@ -203,7 +227,6 @@ def create_levels():
 def create_academic_sessions():
     print("\nCreating Academic Sessions...")
     sessions = {}
-    
     sessions_data = [
         {'name': '2020/2021', 'start': '2020-09-01', 'end': '2021-07-31'},
         {'name': '2021/2022', 'start': '2021-09-01', 'end': '2022-07-31'},
@@ -212,7 +235,6 @@ def create_academic_sessions():
         {'name': '2024/2025', 'start': '2024-09-01', 'end': '2025-07-31'},
         {'name': '2025/2026', 'start': '2025-09-01', 'end': '2026-07-31', 'is_current': True},
     ]
-    
     for session_data in sessions_data:
         session, created = AcademicSession.objects.get_or_create(
             name=session_data['name'],
@@ -224,13 +246,11 @@ def create_academic_sessions():
         )
         sessions[session_data['name']] = session
         print(f"  Created: {session.name}")
-    
     return sessions
 
 def create_semesters(sessions):
     print("\nCreating Semesters...")
     semesters = {}
-    
     for session_name, session in sessions.items():
         for sem_name, sem_display in [('first', 'First Semester'), ('second', 'Second Semester')]:
             is_current = (session_name == '2025/2026' and sem_name == 'first')
@@ -241,27 +261,23 @@ def create_semesters(sessions):
             )
             semesters[f"{session_name}_{sem_name}"] = semester
             print(f"  Created: {session.name} - {sem_display}")
-    
     return semesters
 
 def create_admin_users():
     print("\nCreating Admin Users...")
     admins = []
-    
     admin_emails = [
         'admin@gmail.com', 'registrar@university.edu.ng', 'dean_engineering@university.edu.ng',
         'dean_science@university.edu.ng', 'dean_social_sciences@university.edu.ng',
         'dean_arts@university.edu.ng', 'dean_management@university.edu.ng',
         'dean_law@university.edu.ng', 'hod_csc@university.edu.ng', 'hod_accounting@university.edu.ng'
     ]
-    
     admin_names = [
         ('Admin', 'User'), ('Dr. Ade', 'Ogunleye'), ('Prof. Ngozi', 'Okonkwo'),
         ('Prof. Olufemi', 'Adewale'), ('Dr. Chiamaka', 'Eze'), ('Prof. Adebayo', 'Okafor'),
         ('Dr. Funmilayo', 'Balogun'), ('Prof. Chukwudi', 'Nwosu'), ('Dr. Similoluwa', 'Ogundipe'),
         ('Dr. Oluwatobi', 'Adebayo')
     ]
-    
     for i, (first_name, last_name) in enumerate(admin_names):
         email = admin_emails[i] if i < len(admin_emails) else f"admin{i}@university.edu.ng"
         user, created = User.objects.get_or_create(
@@ -279,13 +295,11 @@ def create_admin_users():
             user.save()
             admins.append(user)
             print(f"  Created Admin: {first_name} {last_name} ({email})")
-    
     return admins
 
 def create_lecturer_users():
     print("\nCreating Lecturer Users...")
     lecturers = []
-    
     lecturer_first_names = [
         'Dr. Chinedu', 'Prof. Oluwaseun', 'Dr. Nkechi', 'Prof. Emeka', 'Dr. Temitope',
         'Prof. Chinonso', 'Dr. Adeola', 'Prof. Ifeanyi', 'Dr. Oluwafemi', 'Prof. Chinwe',
@@ -294,19 +308,16 @@ def create_lecturer_users():
         'Dr. Oluwaseyi', 'Prof. Chimamanda', 'Dr. Oluwole', 'Prof. Ngozi', 'Dr. Oluwatosin',
         'Prof. Chibueze', 'Dr. Oluwaseun', 'Prof. Chiamaka', 'Dr. Oluwakemi', 'Prof. Olumide'
     ]
-    
     lecturer_last_names = [
         'Okafor', 'Adewale', 'Eze', 'Okonkwo', 'Balogun', 'Nwosu', 'Ogunleye',
         'Chukwu', 'Oladipo', 'Nwachukwu', 'Oyedele', 'Okeke', 'Ogunbiyi', 'Nwankwo',
         'Ogunyemi', 'Ekwueme', 'Ogunlana', 'Nweke', 'Ogunwale', 'Okpara', 'Ogunjobi',
         'Nwagwu', 'Ogunlade', 'Okoro', 'Ogunmuyiwa', 'Nwaka', 'Ogunbanwo', 'Nwagbara'
     ]
-    
     for i in range(30):
         first_name = lecturer_first_names[i % len(lecturer_first_names)]
         last_name = lecturer_last_names[i % len(lecturer_last_names)]
         email = f"lecturer.{first_name.lower().replace(' ', '')}.{last_name.lower()}@university.edu.ng"
-        
         user, created = User.objects.get_or_create(
             email=email,
             defaults={
@@ -321,24 +332,19 @@ def create_lecturer_users():
             user.save()
             lecturers.append(user)
             print(f"  Created Lecturer {i+1}: {first_name} {last_name}")
-    
     return lecturers
 
 def create_students(departments, levels, total_students=2000):
     print(f"\nCreating {total_students} Student Users...")
     students = []
-    
     admission_years = [2020, 2021, 2022, 2023, 2024, 2025]
     departments_list = list(departments.values())
-    
     for i in range(total_students):
         first_name = random.choice(NIGERIAN_FIRST_NAMES)
         last_name = random.choice(NIGERIAN_LAST_NAMES)
         email = f"{first_name.lower()}.{last_name.lower()}{random.randint(100, 999)}@student.edu.ng"
         matric_no = f"U{random.randint(20, 25)}/{random.choice(['01', '02', '03', '04', '05'])}/{str(i+10000).zfill(4)}"
         admission_year = random.choice(admission_years)
-        
-        # Determine level based on admission year
         current_year = 2025
         years_elapsed = current_year - admission_year
         if years_elapsed >= 4:
@@ -351,10 +357,8 @@ def create_students(departments, levels, total_students=2000):
             level_value = 100
         else:
             level_value = 100
-        
         level = levels.get(level_value, levels[100])
         department = random.choice(departments_list)
-        
         user, created = User.objects.get_or_create(
             email=email,
             defaults={
@@ -363,11 +367,9 @@ def create_students(departments, levels, total_students=2000):
                 'role': 'student'
             }
         )
-        
         if created:
             user.set_password('admin123')
             user.save()
-            
             student, created = StudentProfile.objects.get_or_create(
                 user=user,
                 defaults={
@@ -378,25 +380,19 @@ def create_students(departments, levels, total_students=2000):
                 }
             )
             students.append(student)
-            
             if (i + 1) % 200 == 0:
                 print(f"  Created {i + 1} students...")
-    
     print(f"  Successfully created {len(students)} students")
     return students
 
 def create_courses(departments, levels, semesters):
     print("\nCreating Courses...")
     courses = {}
-    
-    # Get semesters for 100L and 200L levels
     first_semester_2025 = semesters.get('2025/2026_first')
     second_semester_2025 = semesters.get('2025/2026_second')
-    
     for dept_code, department in departments.items():
         if dept_code in COURSES_DATA:
             for course_data in COURSES_DATA[dept_code]:
-                # Assign level based on course code
                 if '101' in course_data['code'] or '102' in course_data['code']:
                     level = levels[100]
                 elif '201' in course_data['code'] or '202' in course_data['code'] or '203' in course_data['code'] or '204' in course_data['code']:
@@ -405,13 +401,10 @@ def create_courses(departments, levels, semesters):
                     level = levels[300]
                 else:
                     level = levels[400]
-                
-                # Assign appropriate semester
                 if '101' in course_data['code'] or '201' in course_data['code'] or '301' in course_data['code'] or '401' in course_data['code']:
                     semester = first_semester_2025
                 else:
                     semester = second_semester_2025
-                
                 course, created = Course.objects.get_or_create(
                     code=course_data['code'],
                     defaults={
@@ -425,55 +418,24 @@ def create_courses(departments, levels, semesters):
                 )
                 courses[course_data['code']] = course
                 print(f"  Created: {course.code} - {course.title} ({course.credit_unit} units)")
-    
     return courses
-
-def generate_random_scores():
-    """Generate random CA and Exam scores"""
-    ca_score = random.randint(20, 40)
-    exam_score = random.randint(20, 70)
-    total = ca_score + exam_score
-    return ca_score, exam_score, total
-
-def get_grade_from_total(total):
-    if total >= 70:
-        return 'A'
-    elif total >= 60:
-        return 'B'
-    elif total >= 50:
-        return 'C'
-    elif total >= 45:
-        return 'D'
-    elif total >= 40:
-        return 'E'
-    else:
-        return 'F'
 
 def create_results(students, courses, semesters, sessions):
     print("\nCreating Results for Students...")
     results_created = 0
-    
-    # Get all semesters
     semester_objects = list(semesters.values())
-    
-    for student in students[:500]:  # Create results for first 500 students to save time
+    for student in students[:500]:
         for semester in semester_objects:
-            # Get courses for this student's level
             student_level = student.current_level.level
             relevant_courses = [c for c in courses.values() if c.level.level == student_level]
-            
             if not relevant_courses:
                 continue
-            
-            # Select 6-8 courses per semester
             num_courses = random.randint(6, 8)
             selected_courses = random.sample(relevant_courses, min(num_courses, len(relevant_courses)))
-            
             results_data = []
             for course in selected_courses:
                 ca_score = random.randint(20, 40)
                 exam_score = random.randint(20, 70)
-                
                 result, created = Result.objects.get_or_create(
                     student=student,
                     course=course,
@@ -484,7 +446,6 @@ def create_results(students, courses, semesters, sessions):
                         'is_published': True
                     }
                 )
-                
                 if created:
                     results_created += 1
                     results_data.append({
@@ -492,12 +453,9 @@ def create_results(students, courses, semesters, sessions):
                         'total_score': float(result.total_score),
                         'grade': result.grade
                     })
-            
-            # Calculate and store GPA if we have results
             if results_data:
                 gpa, total_qp, total_cu = calculate_semester_gpa(results_data)
                 class_degree = get_class_degree(gpa)
-                
                 SemesterGPARecord.objects.update_or_create(
                     student=student,
                     semester=semester,
@@ -508,33 +466,26 @@ def create_results(students, courses, semesters, sessions):
                         'class_degree': class_degree
                     }
                 )
-            
             if results_created % 500 == 0 and results_created > 0:
                 print(f"  Created {results_created} results...")
-    
     print(f"  Successfully created {results_created} results")
 
 def calculate_all_cgpa(students):
     print("\nCalculating CGPA for all students...")
-    
     for student in students:
         gpa_records = SemesterGPARecord.objects.filter(student=student)
-        
         if not gpa_records:
             continue
-        
         semester_data = []
         for record in gpa_records:
             semester_data.append({
                 'total_quality_points': float(record.total_quality_points),
                 'total_credit_units': record.total_credit_units
             })
-        
         cgpa = calculate_cgpa(semester_data)
         class_degree = get_class_degree(cgpa)
         total_qp = sum(float(r.total_quality_points) for r in gpa_records)
         total_cu = sum(r.total_credit_units for r in gpa_records)
-        
         CGPARecord.objects.update_or_create(
             student=student,
             defaults={
@@ -544,38 +495,31 @@ def calculate_all_cgpa(students):
                 'class_degree': class_degree
             }
         )
-    
     print(f"  Calculated CGPA for {len(students)} students")
 
 def main():
     print("=" * 60)
     print("POPULATING NIGERIAN UNIVERSITY RESULT MANAGEMENT SYSTEM")
     print("=" * 60)
-    
+    if NON_INTERACTIVE:
+        print("Running in non-interactive mode...")
+    else:
+        response = input("This will populate the database with sample data. Continue? (y/n): ")
+        if response.lower() != 'y':
+            print("Operation cancelled.")
+            return
     try:
         with transaction.atomic():
-            # Step 1: Create academic structure
             faculties, departments = create_faculties_and_departments()
             levels = create_levels()
             sessions = create_academic_sessions()
             semesters = create_semesters(sessions)
-            
-            # Step 2: Create users
             admins = create_admin_users()
             lecturers = create_lecturer_users()
-            
-            # Step 3: Create students
             students = create_students(departments, levels, total_students=2000)
-            
-            # Step 4: Create courses
             courses = create_courses(departments, levels, semesters)
-            
-            # Step 5: Create results
             create_results(students, courses, semesters, sessions)
-            
-            # Step 6: Calculate CGPA
             calculate_all_cgpa(students)
-            
             print("\n" + "=" * 60)
             print("POPULATION COMPLETED SUCCESSFULLY!")
             print("=" * 60)
@@ -593,7 +537,6 @@ def main():
             print("  Admin email: admin@gmail.com")
             print("  All passwords: admin123")
             print("=" * 60)
-            
     except Exception as e:
         print(f"\nERROR: {str(e)}")
         import traceback

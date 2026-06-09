@@ -3,14 +3,15 @@
 # Exit on error
 set -o errexit
 
+echo "=========================================="
+echo "Starting Build Process"
+echo "=========================================="
+
 echo "Installing dependencies..."
 pip install -r requirements.txt
 
-# Install additional packages if needed
-pip install gunicorn whitenoise
-
 echo "Running migrations..."
-python manage.py migrate
+python manage.py migrate --noinput
 
 echo "Creating superuser..."
 python manage.py shell << EOF
@@ -23,7 +24,16 @@ else:
     print("Superuser already exists")
 EOF
 
+echo "Running population scripts..."
+echo "Populating database with initial data (faculties, departments, users)..."
+python populate_db.py --non-interactive
+
+echo "Populating database with courses and results..."
+python populate_results_complete.py --non-interactive
+
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-echo "Build completed successfully!"
+echo "=========================================="
+echo "Build Completed Successfully!"
+echo "=========================================="

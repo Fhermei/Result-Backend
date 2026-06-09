@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 import os
+import re
 
 load_dotenv()
 
@@ -74,39 +75,38 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database - Supabase PostgreSQL (without dj_database_url)
-DATABASE_URL = os.getenv('DATABASE_URL', '')
-if DATABASE_URL:
-    # Parse DATABASE_URL manually
-    import re
-    match = re.match(r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', DATABASE_URL)
-    if match:
-        user, password, host, port, name = match.groups()
-        DATABASES = {
-            'default': {
+# Database - Supabase PostgreSQL
+def get_db_config():
+    """Get database configuration from DATABASE_URL"""
+    database_url = os.getenv('DATABASE_URL', '')
+    
+    if database_url:
+        # Parse DATABASE_URL manually
+        pattern = r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)'
+        match = re.match(pattern, database_url)
+        if match:
+            user, password, host, port, name = match.groups()
+            return {
                 'ENGINE': 'django.db.backends.postgresql',
                 'NAME': name,
                 'USER': user,
                 'PASSWORD': password,
                 'HOST': host,
                 'PORT': port,
-                'OPTIONS': {'sslmode': 'require'},
+                'OPTIONS': {
+                    'sslmode': 'require',
+                },
             }
-        }
-    else:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
-        }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+    
+    # Fallback to SQLite for local development
+    return {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+
+DATABASES = {
+    'default': get_db_config()
+}
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
@@ -171,7 +171,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://result-frontend-six.vercel.app",
-    "https://result-frontend-git-main.vercel.app",
     "https://result-frontend.vercel.app",
     "https://*.vercel.app",
 ]
