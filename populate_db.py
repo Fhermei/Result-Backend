@@ -10,14 +10,13 @@ django.setup()
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from faker import Faker
+import random
 from apps.academics.models import Faculty, Department, AcademicSession, Semester, Level
 from apps.courses.models import Course, CourseRegistration
 from apps.students.models import StudentProfile
 from apps.results.models import Result, SemesterGPARecord, CGPARecord
 
 User = get_user_model()
-fake = Faker('en_NG')
 
 NON_INTERACTIVE = '--non-interactive' in sys.argv
 if NON_INTERACTIVE:
