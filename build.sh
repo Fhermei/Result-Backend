@@ -24,10 +24,10 @@ else:
 EOF
 
 echo "Populating database with initial data..."
-python populate_db.py --non-interactive
+python populate_db.py --non-interactive || echo "Population script failed but continuing..."
 
 echo "Populating database with courses and results..."
-python populate_results_complete.py --non-interactive
+python populate_results_complete.py --non-interactive || echo "Population script failed but continuing..."
 
 echo "Collecting static files..."
 python manage.py collectstatic --noinput

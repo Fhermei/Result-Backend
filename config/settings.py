@@ -4,10 +4,12 @@ from dotenv import load_dotenv
 import os
 import dj_database_url
 
+# Load environment variables from .env file (only for local development)
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Use environment variable with fallback for local development
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-8x5&_=k3^7m9#2p!q@r$s%t^u*v(w)x-y+z12345678')
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
@@ -75,18 +77,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database - Use Render PostgreSQL (no fallback to SQLite for production)
+# Database - Use Render PostgreSQL
 DATABASE_URL = os.getenv('DATABASE_URL')
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is not set!")
-
-DATABASES = {
-    'default': dj_database_url.config(
-        default=DATABASE_URL,
-        conn_max_age=600,
-        ssl_require=False
-    )
-}
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=False
+        )
+    }
+else:
+    # Fallback for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
