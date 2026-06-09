@@ -23,11 +23,11 @@ else:
     print("Superuser already exists")
 EOF
 
-echo "Populating database with initial data..."
-python populate_db.py --non-interactive || echo "Population script failed but continuing..."
+echo "Populating database with faculties, departments, and users..."
+python populate_db.py --non-interactive
 
 echo "Populating database with courses and results..."
-python populate_results_complete.py --non-interactive || echo "Population script failed but continuing..."
+python populate_results_complete.py --non-interactive
 
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
