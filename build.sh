@@ -6,10 +6,13 @@ set -o errexit
 echo "Installing dependencies..."
 pip install -r requirements.txt
 
+# Install additional packages if needed
+pip install gunicorn whitenoise
+
 echo "Running migrations..."
 python manage.py migrate
 
-echo "Creating superuser if not exists..."
+echo "Creating superuser..."
 python manage.py shell << EOF
 from django.contrib.auth import get_user_model
 User = get_user_model()
