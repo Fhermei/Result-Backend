@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Exit on error
 set -o errexit
 
 echo "=========================================="
@@ -24,8 +23,7 @@ else:
     print("Superuser already exists")
 EOF
 
-echo "Running population scripts..."
-echo "Populating database with initial data (faculties, departments, users)..."
+echo "Populating database with initial data..."
 python populate_db.py --non-interactive
 
 echo "Populating database with courses and results..."

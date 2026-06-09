@@ -2,7 +2,7 @@ from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 import os
-import re
+import dj_database_url
 
 load_dotenv()
 
@@ -75,38 +75,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database - Supabase PostgreSQL
-def get_db_config():
-    """Get database configuration from DATABASE_URL"""
-    database_url = os.getenv('DATABASE_URL', '')
-    
-    if database_url:
-        # Parse DATABASE_URL manually
-        pattern = r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)'
-        match = re.match(pattern, database_url)
-        if match:
-            user, password, host, port, name = match.groups()
-            return {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': name,
-                'USER': user,
-                'PASSWORD': password,
-                'HOST': host,
-                'PORT': port,
-                'OPTIONS': {
-                    'sslmode': 'require',
-                },
-            }
-    
-    # Fallback to SQLite for local development
-    return {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database - Use Render PostgreSQL
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=False  # Render internal connections don't need SSL
+        )
     }
-
-DATABASES = {
-    'default': get_db_config()
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
