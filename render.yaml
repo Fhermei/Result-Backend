@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: result-backend
+    runtime: python
+    repo: https://github.com/Fhermei/Result-Backend
+    plan: free
+    branch: main
+    buildCommand: ./build.sh
+    startCommand: gunicorn config.wsgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: DEBUG
+        value: False
+      - key: DATABASE_URL
+        value: postgresql://postgres:similoluwaproject@db.ycluuwannajkygqarfxc.supabase.co:5432/postgres
+      - key: SECRET_KEY
+        value: django-insecure-8x5&_=k3^7m9#2p!q@r$s%t^u*v(w)x-y+z12345678
+      - key: ALLOWED_HOSTS
+        value: localhost,127.0.0.1,.onrender.com,.vercel.app,result-backend.onrender.com
