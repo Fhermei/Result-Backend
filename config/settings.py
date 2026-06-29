@@ -4,17 +4,18 @@ from dotenv import load_dotenv
 import os
 import dj_database_url
 
-# Load environment variables from .env file (only for local development)
+# Load environment variables from .env file
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Use environment variable with fallback for local development
+# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-8x5&_=k3^7m9#2p!q@r$s%t^u*v(w)x-y+z12345678')
 
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com,.vercel.app').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com,.vercel.app,result-backend.onrender.com,http://localhost:5173').split(',')
 
 # Application definition
 DJANGO_APPS = [
@@ -77,16 +78,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database - Use Render PostgreSQL
+# ============================================
+# DATABASE - Supabase PostgreSQL
+# ============================================
 DATABASE_URL = os.getenv('DATABASE_URL')
+
 if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=False
-        )
-    }
+    try:
+        # Try to connect with SSL
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=DATABASE_URL,
+                conn_max_age=600,
+                ssl_require=True
+            )
+        }
+        print("✅ Using Supabase PostgreSQL database")
+    except Exception as e:
+        print(f"⚠️ Error with DATABASE_URL: {e}")
+        print("⚠️ Falling back to SQLite")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 else:
     # Fallback for local development
     DATABASES = {
@@ -95,6 +111,7 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+    print("⚠️ Using SQLite database (local development)")
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'

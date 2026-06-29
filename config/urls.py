@@ -9,10 +9,9 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     
-    # App routes
     path('api/auth/', include('apps.accounts.urls')),
     path('api/academics/', include('apps.academics.urls')),
     path('api/courses/', include('apps.courses.urls')),
-    path('api/students/', include('apps.students.urls')),
+    path('api/students/', include('apps.students.urls')),  # <-- This must exist
     path('api/results/', include('apps.results.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,9 +1,9 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 
 class IsAdmin(BasePermission):
     message = 'Access restricted to Admin users only.'
-    
+
     def has_permission(self, request, view):
         return bool(
             request.user and
@@ -14,7 +14,7 @@ class IsAdmin(BasePermission):
 
 class IsLecturer(BasePermission):
     message = 'Access restricted to Lecturer users only.'
-    
+
     def has_permission(self, request, view):
         return bool(
             request.user and
@@ -25,7 +25,7 @@ class IsLecturer(BasePermission):
 
 class IsStudent(BasePermission):
     message = 'Access restricted to Student users only.'
-    
+
     def has_permission(self, request, view):
         return bool(
             request.user and
@@ -36,7 +36,7 @@ class IsStudent(BasePermission):
 
 class IsAdminOrLecturer(BasePermission):
     message = 'Access restricted to Admin or Lecturer users.'
-    
+
     def has_permission(self, request, view):
         return bool(
             request.user and
@@ -46,11 +46,12 @@ class IsAdminOrLecturer(BasePermission):
 
 
 class IsAdminOrReadOnly(BasePermission):
-    message = 'Write access restricted to Admin users.'
-    
+    """Admin can write; anyone can read (AllowAny for GET)."""
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+        if request.method in SAFE_METHODS:
             return True
-        return request.user.role == 'admin'
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.role == 'admin'
+        )

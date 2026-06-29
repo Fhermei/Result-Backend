@@ -20,13 +20,24 @@ User = get_user_model()
 
 
 class LoginView(TokenObtainPairView):
+    """
+    Custom login endpoint.
+    Accepts { email, password } or { matric_no, password }.
+    """
     permission_classes = [AllowAny]
     serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        print("=" * 50)
+        print("Login request received")
+        print(f"Request data: {request.data}")
+        print("=" * 50)
+        return super().post(request, *args, **kwargs)
 
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
         try:
             refresh_token = request.data.get('refresh')
@@ -42,16 +53,18 @@ class LogoutView(APIView):
 class MeView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserDetailSerializer
-    
+
     def get_object(self):
         return self.request.user
 
 
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
-        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
         user = request.user
         user.set_password(serializer.validated_data['new_password'])
@@ -65,31 +78,43 @@ class UserListCreateView(generics.ListCreateAPIView):
     filterset_fields = ['role', 'is_active']
     search_fields = ['email', 'first_name', 'last_name']
     ordering_fields = ['last_name', 'date_joined']
-    
+
     def get_queryset(self):
         return User.objects.all().order_by('last_name', 'first_name')
-    
+
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return CreateUserSerializer
         return UserListSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = CreateUserSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return Response(
+            {'detail': 'User created successfully.'},
+            status=status.HTTP_201_CREATED
+        )
 
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, IsAdmin]
     queryset = User.objects.all()
     serializer_class = UserDetailSerializer
-    
+
     def destroy(self, request, *args, **kwargs):
         user = self.get_object()
         user.is_active = False
         user.save()
-        return Response({'detail': f'User {user.get_full_name()} has been deactivated.'})
+        return Response(
+            {'detail': f'User {user.get_full_name()} has been deactivated.'}
+        )
 
 
 class LecturerListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsAdmin]
     serializer_class = UserListSerializer
-    
+
     def get_queryset(self):
         return User.objects.filter(role='lecturer', is_active=True).order_by('last_name')

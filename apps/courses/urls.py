@@ -7,5 +7,5 @@ urlpatterns = [
     path('my-courses/', views.MyCoursesView.as_view(), name='my_courses'),
     path('register/', views.RegisterCoursesView.as_view(), name='register_courses'),
     path('my-registrations/', views.MyRegisteredCoursesView.as_view(), name='my_registrations'),
-    path('<int:course_id>/students/', views.CourseStudentsView.as_view(), name='course-students'),
+    path('<int:course_id>/students/', views.CourseStudentsView.as_view(), name='course_students'),
 ]

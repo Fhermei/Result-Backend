@@ -1,6 +1,6 @@
 from rest_framework import generics, filters, status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Course, CourseRegistration
@@ -21,9 +21,7 @@ class CourseListCreateView(generics.ListCreateAPIView):
     
     def get_permissions(self):
         if self.request.method == 'GET':
-            # Anyone authenticated can view courses
             return [IsAuthenticated()]
-        # POST, PUT, DELETE require admin or lecturer
         return [IsAdminOrLecturer()]
     
     def get_queryset(self):
@@ -148,11 +146,9 @@ class CourseStudentsView(generics.ListAPIView):
         except Course.DoesNotExist:
             return StudentProfile.objects.none()
         
-        # Verify lecturer teaches this course
         if self.request.user != course.lecturer and not self.request.user.is_admin:
             return StudentProfile.objects.none()
         
-        # Get students registered for this course
         registrations = CourseRegistration.objects.filter(course=course)
         student_ids = registrations.values_list('student', flat=True)
         
