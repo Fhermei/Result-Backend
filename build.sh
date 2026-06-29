@@ -12,7 +12,7 @@ pip install -r requirements.txt
 echo "Running migrations..."
 python manage.py migrate --noinput
 
-echo "Creating superuser..."
+echo "Creating superuser (if not exists)..."
 python manage.py shell << EOF
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -22,12 +22,6 @@ if not User.objects.filter(email='admin@gmail.com').exists():
 else:
     print("Superuser already exists")
 EOF
-
-echo "Populating database with faculties, departments, and users..."
-python populate_db.py --non-interactive
-
-echo "Populating database with courses and results..."
-python populate_results_complete.py --non-interactive
 
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
